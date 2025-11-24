@@ -1,4 +1,4 @@
-# Aplikasi Monitoring Kontraktor (Contractor Monitoring System)
+# Aplikasi Monitoring RAM Civil
 
 Aplikasi web yang dirancang untuk mempermudah proses monitoring dan manajemen pekerjaan kontraktor. Proyek ini mendigitalisasi alur kerja manual, mulai dari pengelolaan kontrak utama (Kontrak Payung) hingga surat perintah kerja (SPK) yang lebih spesifik, serta menyediakan visualisasi data untuk pengambilan keputusan yang lebih cepat.
 
@@ -28,6 +28,7 @@ Aplikasi ini hadir sebagai solusi digital terpusat untuk mengatasi masalah-masal
 -   **Bahasa:** [TypeScript](https://www.typescriptlang.org/)
 -   **Database:** [MongoDB](https://www.mongodb.com/)
 -   **Autentikasi:** [Supabase](https://supabase.io/) (Auth)
+-   **Storage:** [Supabase](https://supabase.io/)
 -   **UI/Styling:** [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
 -   **Package Manager:** [pnpm](https://pnpm.io/)
 
@@ -40,6 +41,25 @@ Aplikasi ini hadir sebagai solusi digital terpusat untuk mengatasi masalah-masal
 -   **📈 Visualisasi Data:** Grafik interaktif untuk memvisualisasikan perbandingan anggaran dan realisasi.
 -   **🔔 Sistem Notifikasi:** Modul untuk mencatat dan mengelola notifikasi atau catatan penting terkait SPK.
 -   **📄 Ekspor & Cetak Laporan:** Kemampuan untuk menghasilkan dokumen (misalnya dalam format PDF) untuk keperluan pelaporan.
+
+## 📸 Dokumentasi
+
+Berikut adalah tata letak untuk beberapa tampilan utama dari aplikasi.
+
+### Halaman Login & Register
+![Halaman Login](public/docs/login-page.png)
+![Halaman Register](public/docs/register-page.png)
+
+### Dashboard Utama
+![Tampilan Dashboard Utama](public/docs/dashboard.png)
+
+### Detail Kontrak & Daftar SPK
+![Tampilan Halaman Detail Kontrak](public/docs/contract-details.png)
+
+### Form Input (Contoh: Tambah SPK Baru)
+![Contoh Tampilan Form Input Data](public/docs/form-input-kontrak.png)
+![Contoh Tampilan Form Input Data](public/docs/form-input-spk.png)
+
 
 ## ⚙️ Cara Menjalankan Proyek (Setup Instructions)
 
@@ -86,3 +106,4 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
     Akses aplikasi melalui browser Anda di [http://localhost:3000](http://localhost:3000).
 
 ---
+
