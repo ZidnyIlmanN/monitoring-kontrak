@@ -59,7 +59,10 @@ Berikut adalah tata letak untuk beberapa tampilan utama dari aplikasi.
 ### Form Input (Contoh: Tambah SPK Baru)
 ![Contoh Tampilan Form Input Data](public/docs/form-input-kontrak.png)
 ![Contoh Tampilan Form Input Data](public/docs/form-input-spk.png)
+![Contoh Tampilan Form Input Data](public/docs/form-input-notifikasi.png)
 
+### Fitur Print
+![Tampilan Fitur Print](public/docs/fitur-print.png)
 
 ## ⚙️ Cara Menjalankan Proyek (Setup Instructions)
 
@@ -106,4 +109,5 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di lingkungan lokal A
     Akses aplikasi melalui browser Anda di [http://localhost:3000](http://localhost:3000).
 
 ---
+
 
