@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { ChevronDown, ChevronUp, Edit, Trash2, Plus, FileText, ImageIcon } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import Swal from "sweetalert2"
 import { useRouter } from "next/navigation"
 
 interface SPKAccordionProps {
@@ -39,17 +40,32 @@ export function SPKAccordion({ spkList, kontrakId }: SPKAccordionProps) {
   }
 
   const handleDelete = async (spkId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus SPK ini? Semua notifikasi terkait juga akan dihapus.")) {
-      return
-    }
+    const result = await Swal.fire({
+      title: "Hapus SPK?",
+      text: "Semua notifikasi dan lampiran terkait akan dihapus. Proses ini tidak dapat dibatalkan.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      confirmButtonText: "Ya, hapus",
+      cancelButtonText: "Batal",
+    })
 
-    const supabase = createClient()
-    const { error } = await supabase.from("spk").delete().eq("id", spkId)
-
-    if (error) {
-      alert("Gagal menghapus SPK: " + error.message)
-    } else {
+    if (!result.isConfirmed) return
+    try {
+      const resp = await fetch(`/api/spk?id=${encodeURIComponent(spkId)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: resp.statusText }))
+        await Swal.fire({ title: "Gagal", text: "Gagal menghapus SPK: " + (err.error || resp.statusText), icon: "error" })
+        return
+      }
+      await Swal.fire({ title: "Terhapus", text: "SPK berhasil dihapus.", icon: "success" })
       router.refresh()
+    } catch (e) {
+      console.error(e)
+      await Swal.fire({ title: "Gagal", text: "Gagal menghapus SPK", icon: "error" })
     }
   }
 
@@ -57,8 +73,8 @@ export function SPKAccordion({ spkList, kontrakId }: SPKAccordionProps) {
     <div className="space-y-4">
       {spkList.map((spk, index) => {
         const isExpanded = expandedIds.has(spk.id)
-        const images = [spk.image_url_1, spk.image_url_2, spk.image_url_3].filter(Boolean)
-        const pdfs = [spk.pdf_url_1, spk.pdf_url_2, spk.pdf_url_3].filter(Boolean)
+        const images = [spk.image_url_1, spk.image_url_2, spk.image_url_3].filter(Boolean) as string[]
+        const pdfs = [spk.pdf_url_1, spk.pdf_url_2, spk.pdf_url_3].filter(Boolean) as string[]
 
         return (
           <Card key={spk.id} className="border-slate-200 shadow-sm overflow-hidden">

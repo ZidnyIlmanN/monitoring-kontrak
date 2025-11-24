@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import useSWR from "swr"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -16,54 +15,11 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ kontrakList, spkList, notifikasiCount }: DashboardStatsProps) {
-  const supabase = createClient()
-
-  async function fetchKontrak() {
-    const { data, error } = await supabase.from("kontrak_payung").select("*").order("created_at", { ascending: false })
-    if (error) throw error
-    return (data || []) as KontrakPayung[]
-  }
-
-  async function fetchSPK() {
-    const { data, error } = await supabase.from("spk").select("*")
-    if (error) throw error
-    return (data || []) as SPK[]
-  }
-
-  async function fetchNotifikasiCount() {
-    const { count, error } = await supabase.from("notifikasi").select("*", { count: "exact", head: true })
-    if (error) throw error
-    return count || 0
-  }
-
-  const { data: kontrakData = [], mutate: mutateKontrak } = useSWR("dashboard:kontrak", fetchKontrak, {
-    fallbackData: kontrakList,
-  })
-
-  const { data: spkData = [], mutate: mutateSpk } = useSWR("dashboard:spk", fetchSPK, { fallbackData: spkList })
-
-  const { data: notifikasiData = 0, mutate: mutateNotif } = useSWR("dashboard:notifikasi-count", fetchNotifikasiCount, {
-    fallbackData: notifikasiCount,
-  })
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("dashboard-stats-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "spk" }, () => {
-        mutateSpk()
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "kontrak_payung" }, () => {
-        mutateKontrak()
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifikasi" }, () => {
-        mutateNotif()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [mutateSpk, mutateKontrak, mutateNotif, supabase])
+  // Use server-provided props as source of truth for stats UI.
+  // Realtime updates via Supabase are removed because data now lives in MongoDB.
+  const kontrakData = kontrakList
+  const spkData = spkList
+  const notifikasiData = notifikasiCount
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("id-ID", {

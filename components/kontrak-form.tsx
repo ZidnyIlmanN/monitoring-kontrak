@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,9 +38,6 @@ export function KontrakForm({ userId, initialData }: KontrakFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
-    const supabase = createClient()
-
     const dataToSave = {
       user_id: userId,
       nama_kontrak_payung: formData.nama_kontrak_payung,
@@ -51,38 +47,50 @@ export function KontrakForm({ userId, initialData }: KontrakFormProps) {
       nilai_kontrak: Number.parseFloat(formData.nilai_kontrak),
     }
 
-    if (initialData?.id) {
-      // Update existing
-      const { error } = await supabase.from("kontrak_payung").update(dataToSave).eq("id", initialData.id)
+    try {
+      if (initialData?.id) {
+        // Update existing via API
+        const resp = await fetch(`/api/kontrakPayung?id=${encodeURIComponent(initialData.id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSave),
+          credentials: "same-origin",
+        })
 
-      if (error) {
-        alert("Gagal mengupdate kontrak: " + error.message)
-        setLoading(false)
-        return
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }))
+          alert("Gagal mengupdate kontrak: " + (err.error || resp.statusText))
+          setLoading(false)
+          return
+        }
+
+        showToast({ title: "Berhasil!", message: "Kontrak berhasil diperbarui.", type: "success" })
+        router.push(`/dashboard/kontrak/${initialData.id}`)
+      } else {
+        // Create new via API
+        const resp = await fetch(`/api/kontrakPayung`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSave),
+          credentials: "same-origin",
+        })
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }))
+          alert("Gagal membuat kontrak: " + (err.error || resp.statusText))
+          setLoading(false)
+          return
+        }
+
+        const body = await resp.json()
+        showToast({ title: "Berhasil!", message: "Kontrak berhasil ditambahkan.", type: "success" })
+        router.push(`/dashboard/kontrak/${body.insertedId}`)
       }
-
-      showToast({
-        title: "Berhasil!",
-        message: "Kontrak berhasil diperbarui.",
-        type: "success",
-      })
-      router.push(`/dashboard/kontrak/${initialData.id}`)
-    } else {
-      // Create new
-      const { data, error } = await supabase.from("kontrak_payung").insert(dataToSave).select().single()
-
-      if (error) {
-        alert("Gagal membuat kontrak: " + error.message)
-        setLoading(false)
-        return
-      }
-
-      showToast({
-        title: "Berhasil!",
-        message: "Kontrak berhasil ditambahkan.",
-        type: "success",
-      })
-      router.push(`/dashboard/kontrak/${data.id}`)
+    } catch (e) {
+      console.error(e)
+      alert("Terjadi kesalahan saat menyimpan kontrak.")
+      setLoading(false)
+      return
     }
 
     router.refresh()

@@ -138,28 +138,35 @@ export function NotifikasiForm({ spkId, kontrakId, initialData }: NotifikasiForm
         pdfUrl = publicUrl
       }
 
-      const { error } = await supabase
-        .from("notifikasi")
-        .update({
-          no_notif: entries[0].no_notif,
-          judul_notifikasi: entries[0].judul_notifikasi,
-          lokasi: entries[0].lokasi,
-          image_url: imageUrl,
-          pdf_url: pdfUrl,
+      // Update via API
+      try {
+        const resp = await fetch(`/api/notifikasi?id=${encodeURIComponent(initialData.id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            no_notif: entries[0].no_notif,
+            judul_notifikasi: entries[0].judul_notifikasi,
+            lokasi: entries[0].lokasi,
+            image_url: imageUrl,
+            pdf_url: pdfUrl,
+          }),
+          credentials: "same-origin",
         })
-        .eq("id", initialData.id)
 
-      if (error) {
-        alert("Gagal mengupdate notifikasi: " + error.message)
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }))
+          alert("Gagal mengupdate notifikasi: " + (err.error || resp.statusText))
+          setLoading(false)
+          return
+        }
+
+        showToast({ title: "Berhasil!", message: "Notifikasi berhasil diperbarui.", type: "success" })
+      } catch (e) {
+        console.error(e)
+        alert("Gagal mengupdate notifikasi")
         setLoading(false)
         return
       }
-
-      showToast({
-        title: "Berhasil!",
-        message: "Notifikasi berhasil diperbarui.",
-        type: "success",
-      })
     } else {
       const dataToInsert = []
 
@@ -219,19 +226,31 @@ export function NotifikasiForm({ spkId, kontrakId, initialData }: NotifikasiForm
         })
       }
 
-      const { error } = await supabase.from("notifikasi").insert(dataToInsert)
+      // Create via API: POST each notification (server expects single object)
+      try {
+        for (const doc of dataToInsert) {
+          const resp = await fetch(`/api/notifikasi`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(doc),
+            credentials: "same-origin",
+          })
 
-      if (error) {
-        alert("Gagal membuat notifikasi: " + error.message)
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ error: resp.statusText }))
+            alert("Gagal membuat notifikasi: " + (err.error || resp.statusText))
+            setLoading(false)
+            return
+          }
+        }
+
+        showToast({ title: "Berhasil!", message: `${entries.length} notifikasi berhasil ditambahkan.`, type: "success" })
+      } catch (e) {
+        console.error(e)
+        alert("Gagal membuat notifikasi")
         setLoading(false)
         return
       }
-
-      showToast({
-        title: "Berhasil!",
-        message: `${entries.length} notifikasi berhasil ditambahkan.`,
-        type: "success",
-      })
     }
 
     router.push(`/dashboard/kontrak/${kontrakId}`)

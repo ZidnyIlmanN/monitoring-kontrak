@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getDb } from "@/lib/mongodb/client"
+import { ObjectId } from "mongodb"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { KontrakForm } from "@/components/kontrak-form"
 import { Button } from "@/components/ui/button"
@@ -9,6 +11,9 @@ import type { KontrakPayung } from "@/lib/types"
 
 export default async function EditKontrakPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
+
+  // Await params as required by Next.js dynamic routes
+  const { id } = await Promise.resolve(params)
 
   const {
     data: { user },
@@ -20,14 +25,25 @@ export default async function EditKontrakPage({ params }: { params: { id: string
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // Fetch kontrak
-  const { data: kontrak } = await supabase
-    .from("kontrak_payung")
-    .select("*")
-    .eq("id", params.id)
-    .single<KontrakPayung>()
-
-  if (!kontrak) {
+  // Fetch kontrak from MongoDB and serialize to plain object
+  const db = await getDb()
+  let kontrak: KontrakPayung | null = null
+  try {
+    const k = await db.collection("kontrakPayung").findOne({ _id: new ObjectId(id) })
+    if (!k) redirect("/dashboard")
+    kontrak = {
+      id: String(k._id?.toString ? k._id.toString() : k.id || ""),
+      user_id: String(k.user_id ?? k.owner ?? ""),
+      nama_kontrak_payung: String(k.nama_kontrak_payung ?? k.nama_kontrak ?? ""),
+      nomor_oas: String(k.nomor_oas ?? ""),
+      waktu_perjanjian: String(k.waktu_perjanjian ?? k.waktuPerjanjian ?? ""),
+      periode_kontrak: String(k.periode_kontrak ?? ""),
+      nilai_kontrak: Number(k.nilai_kontrak ?? 0),
+      sisa_nilai_kontrak: k.sisa_nilai_kontrak ?? undefined,
+      created_at: String(k.createdAt ?? k.created_at ?? ""),
+      updated_at: String(k.updatedAt ?? k.updated_at ?? ""),
+    }
+  } catch (e) {
     redirect("/dashboard")
   }
 
@@ -36,7 +52,7 @@ export default async function EditKontrakPage({ params }: { params: { id: string
       <DashboardHeader userName={profile?.full_name || user.email || "User"} />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href={`/dashboard/kontrak/${params.id}`}>
+        <Link href={`/dashboard/kontrak/${id}`}>
           <Button variant="ghost" size="sm" className="mb-6 gap-2">
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Detail Kontrak

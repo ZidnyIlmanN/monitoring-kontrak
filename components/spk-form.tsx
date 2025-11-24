@@ -145,36 +145,47 @@ export function SPKForm({ kontrakId, initialData }: SPKFormProps) {
       pdf_url_3: pdfUrls[2],
     }
 
-    if (initialData?.id) {
-      // Update
-      const { error } = await supabase.from("spk").update(dataToSave).eq("id", initialData.id)
+    try {
+      if (initialData?.id) {
+        // Update via API
+        const resp = await fetch(`/api/spk?id=${encodeURIComponent(initialData.id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSave),
+          credentials: "same-origin",
+        })
 
-      if (error) {
-        alert("Gagal mengupdate SPK: " + error.message)
-        setLoading(false)
-        return
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }))
+          alert("Gagal mengupdate SPK: " + (err.error || resp.statusText))
+          setLoading(false)
+          return
+        }
+
+        showToast({ title: "Berhasil!", message: "SPK berhasil diperbarui.", type: "success" })
+      } else {
+        // Create via API
+        const resp = await fetch(`/api/spk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSave),
+          credentials: "same-origin",
+        })
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }))
+          alert("Gagal membuat SPK: " + (err.error || resp.statusText))
+          setLoading(false)
+          return
+        }
+
+        showToast({ title: "Berhasil!", message: "SPK berhasil ditambahkan.", type: "success" })
       }
-
-      showToast({
-        title: "Berhasil!",
-        message: "SPK berhasil diperbarui.",
-        type: "success",
-      })
-    } else {
-      // Create
-      const { error } = await supabase.from("spk").insert(dataToSave)
-
-      if (error) {
-        alert("Gagal membuat SPK: " + error.message)
-        setLoading(false)
-        return
-      }
-
-      showToast({
-        title: "Berhasil!",
-        message: "SPK berhasil ditambahkan.",
-        type: "success",
-      })
+    } catch (e) {
+      console.error(e)
+      alert("Terjadi kesalahan saat menyimpan SPK.")
+      setLoading(false)
+      return
     }
 
     router.push(`/dashboard/kontrak/${kontrakId}`)

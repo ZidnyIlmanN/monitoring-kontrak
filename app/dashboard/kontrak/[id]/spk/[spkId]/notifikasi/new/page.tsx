@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getDb } from "@/lib/mongodb/client"
+import { ObjectId } from "mongodb"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { NotifikasiForm } from "@/components/notifikasi-form"
 import { Button } from "@/components/ui/button"
@@ -13,6 +15,9 @@ export default async function NewNotifikasiPage({
 }) {
   const supabase = await createClient()
 
+  // Await params per Next.js dynamic route requirement
+  const { id, spkId } = await Promise.resolve(params)
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -23,10 +28,14 @@ export default async function NewNotifikasiPage({
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // Verify SPK exists
-  const { data: spk } = await supabase.from("spk").select("*, kontrak_payung(*)").eq("id", params.spkId).single()
-
-  if (!spk) {
+  // Verify SPK exists (MongoDB)
+  const db = await getDb()
+  let spk: any = null
+  try {
+    const s = await db.collection("spk").findOne({ _id: new ObjectId(spkId) })
+    if (!s) redirect("/dashboard")
+    spk = { ...s, id: s._id.toString() }
+  } catch (e) {
     redirect("/dashboard")
   }
 
@@ -35,7 +44,7 @@ export default async function NewNotifikasiPage({
       <DashboardHeader userName={profile?.full_name || user.email || "User"} />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href={`/dashboard/kontrak/${params.id}`}>
+        <Link href={`/dashboard/kontrak/${id}`}>
           <Button variant="ghost" size="sm" className="mb-6 gap-2">
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Detail Kontrak
@@ -47,7 +56,7 @@ export default async function NewNotifikasiPage({
           <p className="text-slate-600">Untuk SPK: {spk.judul_spk}</p>
         </div>
 
-        <NotifikasiForm spkId={params.spkId} kontrakId={params.id} />
+        <NotifikasiForm spkId={spkId} kontrakId={id} />
       </main>
     </div>
   )

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
+import { getDb } from "@/lib/mongodb/client"
+import { ObjectId } from "mongodb"
 import { AutoPrint } from "@/components/auto-print"
 
 type Kontrak = {
@@ -51,39 +53,65 @@ function formatCurrencyIDR(v: unknown) {
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const db = await getDb()
 
   // Ambil data kontrak
-  const { data: kontrak, error: kontrakErr } = await supabase
-    .from("kontrak_payung")
-    .select("*")
-    .eq("id", id)
-    .single<Kontrak>()
-
-  if (kontrakErr) {
+  let kontrak: any = null
+  try {
+    const k = await db.collection("kontrakPayung").findOne({ _id: new ObjectId(id) })
+    if (!k) {
+      return (
+        <main className="p-8">
+          <h1 className="text-xl font-semibold mb-2">Gagal memuat data kontrak</h1>
+          <p className="text-sm text-muted-foreground">ID: {id}</p>
+        </main>
+      )
+    }
+    kontrak = { ...k, id: k._id.toString() }
+  } catch (e) {
     return (
       <main className="p-8">
         <h1 className="text-xl font-semibold mb-2">Gagal memuat data kontrak</h1>
-        <p className="text-sm text-muted-foreground">ID: {(await params).id}</p>
-        <p className="mt-4 text-red-600">{kontrakErr.message}</p>
+        <p className="text-sm text-muted-foreground">ID: {id}</p>
       </main>
     )
   }
 
-  // Ambil semua SPK di kontrak ini
-  const { data: spks = [] } = (await supabase
-    .from("spk")
-    .select("*")
-    .eq("kontrak_payung_id", id)
-    .order("no_spk", { ascending: true })) as unknown as { data: SPK[] }
+  // Ambil semua SPK di kontrak ini dan serialisasi ke objek plain
+  const spkDocs = await db.collection("spk").find({ kontrak_payung_id: id }).sort({ no_spk: 1 }).toArray()
+  const spks: SPK[] = (spkDocs || []).map((s: any) => ({
+    id: String(s._id?.toString ? s._id.toString() : s.id || ""),
+    kontrak_payung_id: String(s.kontrak_payung_id ?? ""),
+    no_spk: String(s.no_spk ?? ""),
+    judul_spk: String(s.judul_spk ?? ""),
+    durasi_spk: String(s.durasi_spk ?? ""),
+    nilai_rekapitulasi_estimasi_biaya: s.nilai_rekapitulasi_estimasi_biaya ?? 0,
+    realisasi_spk: s.realisasi_spk ?? 0,
+    progress_percentage: s.progress_percentage ?? 0,
+    keterangan: s.keterangan ?? null,
+    image_url_1: s.image_url_1 ?? null,
+    image_url_2: s.image_url_2 ?? null,
+    image_url_3: s.image_url_3 ?? null,
+    pdf_url_1: s.pdf_url_1 ?? null,
+    pdf_url_2: s.pdf_url_2 ?? null,
+    pdf_url_3: s.pdf_url_3 ?? null,
+  } as SPK))
 
   const spkIds = spks.map((s) => s.id)
-  // Ambil semua notifikasi sekaligus lalu kelompokkan per SPK
+
+  // Ambil semua notifikasi sekaligus lalu serialisasi dan kelompokkan per SPK
   let notifikasiBySpk = new Map<string, Notifikasi[]>()
   if (spkIds.length > 0) {
-    const { data: notifs = [] } = (await supabase.from("notifikasi").select("*").in("spk_id", spkIds)) as unknown as {
-      data: Notifikasi[]
-    }
+    const notifsDocs = await db.collection("notifikasi").find({ spk_id: { $in: spkIds } }).toArray()
+    const notifs: Notifikasi[] = (notifsDocs || []).map((n: any) => ({
+      id: String(n._id?.toString ? n._id.toString() : n.id || ""),
+      spk_id: String(n.spk_id ?? ""),
+      no_notif: String(n.no_notif ?? ""),
+      judul_notifikasi: String(n.judul_notifikasi ?? ""),
+      lokasi: String(n.lokasi ?? ""),
+      image_url: n.image_url ?? null,
+      pdf_url: n.pdf_url ?? null,
+    }))
 
     notifikasiBySpk = notifs.reduce((map, n) => {
       const arr = map.get(n.spk_id) || []

@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getDb } from "@/lib/mongodb/client"
+import { ObjectId } from "mongodb"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { SPKForm } from "@/components/spk-form"
 import { Button } from "@/components/ui/button"
@@ -8,6 +10,9 @@ import Link from "next/link"
 
 export default async function NewSPKPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
+
+  // Await params per Next.js dynamic route requirement
+  const { id } = await Promise.resolve(params)
 
   const {
     data: { user },
@@ -19,10 +24,14 @@ export default async function NewSPKPage({ params }: { params: { id: string } })
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  // Verify kontrak exists
-  const { data: kontrak } = await supabase.from("kontrak_payung").select("*").eq("id", params.id).single()
-
-  if (!kontrak) {
+  // Verify kontrak exists (MongoDB)
+  const db = await getDb()
+  let kontrak: any = null
+  try {
+    const k = await db.collection("kontrakPayung").findOne({ _id: new ObjectId(id) })
+    if (!k) redirect("/dashboard")
+    kontrak = { ...k, id: k._id.toString() }
+  } catch (e) {
     redirect("/dashboard")
   }
 
@@ -31,7 +40,7 @@ export default async function NewSPKPage({ params }: { params: { id: string } })
       <DashboardHeader userName={profile?.full_name || user.email || "User"} />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href={`/dashboard/kontrak/${params.id}`}>
+        <Link href={`/dashboard/kontrak/${id}`}>
           <Button variant="ghost" size="sm" className="mb-6 gap-2">
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Detail Kontrak
@@ -43,7 +52,7 @@ export default async function NewSPKPage({ params }: { params: { id: string } })
           <p className="text-slate-600">Untuk kontrak: {kontrak.nama_kontrak_payung}</p>
         </div>
 
-        <SPKForm kontrakId={params.id} />
+        <SPKForm kontrakId={id} />
       </main>
     </div>
   )
